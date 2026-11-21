@@ -1,5 +1,5 @@
-// Trabalho 2 - Métodos Formais
-// Integrantes: Carolina Panizzi,
+// Trabalho 2 - Métodos Formais - Turma 310
+// Integrantes: Carolina Panizzi,Jullia Ross, Nathalie Jordão,Yasmin Weber
 
 class DequeCircular {
   var a: array<int>
