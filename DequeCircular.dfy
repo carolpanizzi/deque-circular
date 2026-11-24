@@ -139,6 +139,71 @@ class DequeCircular {
       }
     }
   }
+
+  // ===================== Pessoa 3 - Remoções =====================
+
+  // Remove e retorna o primeiro elemento do deque.
+  method PopFront() returns (valor: int)
+    requires Valid()
+    requires quantidade > 0
+    modifies this
+    ensures Valid()
+    ensures a == old(a)
+    ensures a.Length == old(a.Length)
+    ensures inicio == (old(inicio) + 1) % a.Length
+    ensures quantidade == old(quantidade) - 1
+    ensures valor == old(elementos[0])
+    ensures elementos == old(elementos)[1..]
+  {
+    valor := a[inicio];
+    inicio := (inicio + 1) % a.Length;
+    quantidade := quantidade - 1;
+    elementos := elementos[1..];
+
+    // Cada elemento restante passa a ocupar a posição lógica anterior.
+    forall i | 0 <= i < quantidade
+      ensures a[(inicio + i) % a.Length] == elementos[i]
+    {
+      assert 0 <= i + 1 < old(quantidade);
+      assert elementos[i] == old(elementos)[i + 1];
+      assert (inicio + i) % a.Length ==
+             (old(inicio) + i + 1) % a.Length;
+      assert a[(old(inicio) + i + 1) % a.Length] ==
+             old(a[(old(inicio) + i + 1) % a.Length]);
+      assert old(a[(old(inicio) + i + 1) % a.Length]) ==
+             old(elementos)[i + 1];
+    }
+  }
+
+  // Remove e retorna o último elemento do deque.
+  method PopBack() returns (valor: int)
+    requires Valid()
+    requires quantidade > 0
+    modifies this
+    ensures Valid()
+    ensures a == old(a)
+    ensures a.Length == old(a.Length)
+    ensures inicio == old(inicio)
+    ensures quantidade == old(quantidade) - 1
+    ensures valor == old(elementos[|elementos| - 1])
+    ensures elementos == old(elementos)[..|old(elementos)| - 1]
+  {
+    valor := a[(inicio + quantidade - 1) % a.Length];
+    quantidade := quantidade - 1;
+    elementos := elementos[..|elementos| - 1];
+
+    // Os elementos restantes mantêm suas posições físicas e sua ordem lógica.
+    forall i | 0 <= i < quantidade
+      ensures a[(inicio + i) % a.Length] == elementos[i]
+    {
+      assert 0 <= i < old(quantidade);
+      assert elementos[i] == old(elementos)[i];
+      assert a[(inicio + i) % a.Length] ==
+             old(a[(old(inicio) + i) % a.Length]);
+      assert old(a[(old(inicio) + i) % a.Length]) ==
+             old(elementos)[i];
+    }
+  }
 }
 
 // ===================== Lemas auxiliares de aritmética modular =====================
