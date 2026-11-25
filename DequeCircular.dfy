@@ -166,11 +166,16 @@ class DequeCircular {
     {
       assert 0 <= i + 1 < old(quantidade);
       assert elementos[i] == old(elementos)[i + 1];
+      // inicio == old(inicio) + 1, ou 0 se old(inicio) era a última posição (volta circular).
+      ModIntervalo(old(inicio) + 1, a.Length);
+      ModIntervalo(inicio + i, a.Length);
+      ModIntervalo(old(inicio) + i + 1, a.Length);
       assert (inicio + i) % a.Length ==
              (old(inicio) + i + 1) % a.Length;
+      // Dentro de old(...), "inicio" já se refere ao valor antigo.
       assert a[(old(inicio) + i + 1) % a.Length] ==
-             old(a[(old(inicio) + i + 1) % a.Length]);
-      assert old(a[(old(inicio) + i + 1) % a.Length]) ==
+             old(a[(inicio + i + 1) % a.Length]);
+      assert old(a[(inicio + i + 1) % a.Length]) ==
              old(elementos)[i + 1];
     }
   }
@@ -198,10 +203,75 @@ class DequeCircular {
     {
       assert 0 <= i < old(quantidade);
       assert elementos[i] == old(elementos)[i];
+      // Dentro de old(...), "inicio" já se refere ao valor antigo.
       assert a[(inicio + i) % a.Length] ==
-             old(a[(old(inicio) + i) % a.Length]);
-      assert old(a[(old(inicio) + i) % a.Length]) ==
+             old(a[(inicio + i) % a.Length]);
+      assert old(a[(inicio + i) % a.Length]) ==
              old(elementos)[i];
+    }
+  }
+
+  // ============== Pessoa 4 - Busca e redimensionamento ==============
+
+  // Verifica se x pertence ao deque.
+  // Percorre as posições lógicas 0..quantidade-1 no array circular.
+  method Contains(x: int) returns (pertence: bool)
+    requires Valid()
+    ensures Valid()
+    ensures pertence <==> x in elementos
+  {
+    var i := 0;
+    while i < quantidade
+      invariant 0 <= i <= quantidade
+      invariant forall k :: 0 <= k < i ==> elementos[k] != x   // nada encontrado até i
+      decreases quantidade - i
+    {
+      if a[(inicio + i) % a.Length] == x {
+        assert elementos[i] == x;
+        pertence := true;
+        return;
+      }
+      i := i + 1;
+    }
+    pertence := false;
+  }
+
+  // Redimensiona o deque para uma capacidade maior.
+  // Como arrays têm tamanho fixo, aloca um array novo e copia os elementos
+  // na ordem lógica (desfazendo a volta circular): o primeiro vai para a posição 0.
+  method Resize(novaCapacidade: int)
+    requires Valid()
+    requires novaCapacidade > a.Length      // só permite crescer
+    modifies this
+    ensures Valid()
+    ensures fresh(a)
+    ensures a.Length == novaCapacidade
+    ensures inicio == 0
+    ensures quantidade == old(quantidade)
+    ensures elementos == old(elementos)     // o conteúdo e a ordem não mudam
+  {
+    var novo := new int[novaCapacidade];
+    var i := 0;
+    while i < quantidade
+      invariant 0 <= i <= quantidade
+      invariant Valid()
+      invariant novo.Length == novaCapacidade
+      invariant forall k :: 0 <= k < i ==> novo[k] == elementos[k]
+      modifies novo
+      decreases quantidade - i
+    {
+      novo[i] := a[(inicio + i) % a.Length];
+      i := i + 1;
+    }
+    a := novo;
+    inicio := 0;
+
+    // Prova de que Valid() vale no array novo: com inicio == 0 e
+    // k < quantidade < a.Length, a posição física (0 + k) % a.Length é o próprio k.
+    forall k | 0 <= k < quantidade
+      ensures a[(inicio + k) % a.Length] == elementos[k]
+    {
+      ModIntervalo(inicio + k, a.Length);
     }
   }
 }
@@ -301,4 +371,84 @@ method ExemplosPessoa2()
 
   // Os deques são independentes entre si
   assert deque.elementos == [5, 10, 20];
+}
+
+// ===================== Main: demonstração com asserções =====================
+
+method Main()
+{
+  // 1. Criação: deque vazio com capacidade 3
+  var deque := new DequeCircular(3);
+  var tamanho := deque.Size();
+  var capacidade := deque.Capacity();
+  var vazio := deque.IsEmpty();
+  var cheio := deque.IsFull();
+  assert tamanho == 0 && capacidade == 3;
+  assert vazio && !cheio;
+
+  // 2. Busca em deque vazio
+  var tem := deque.Contains(1);
+  assert !tem;
+
+  // 3. Inserções nas duas pontas, com volta circular do início (0 -> 2)
+  deque.PushBack(2);                     // [2]
+  deque.PushFront(1);                    // [1, 2]
+  deque.PushBack(3);                     // [1, 2, 3]
+  assert deque.elementos == [1, 2, 3];
+  cheio := deque.IsFull();
+  assert cheio;
+
+  // 4. Busca de elemento presente e ausente
+  tem := deque.Contains(2);
+  assert tem;
+  tem := deque.Contains(9);
+  assert !tem;
+
+  // 5. Remoções nas duas pontas: valores retornados e ordem restante
+  var primeiro := deque.PopFront();
+  assert primeiro == 1;
+  assert deque.elementos == [2, 3];
+  var ultimo := deque.PopBack();
+  assert ultimo == 3;
+  assert deque.elementos == [2];
+  print "Removidos: ", primeiro, " e ", ultimo, "\n";
+
+  // 6. Nova volta circular depois das remoções; deque cheio de novo
+  deque.PushFront(7);                    // [7, 2]
+  deque.PushBack(8);                     // [7, 2, 8]
+  assert deque.elementos == [7, 2, 8];
+  cheio := deque.IsFull();
+  assert cheio;
+  tem := deque.Contains(3);              // o 3 foi removido antes
+  assert !tem;
+
+  // 7. Redimensionamento com o deque cheio: dados e ordem preservados
+  deque.Resize(6);
+  assert deque.elementos == [7, 2, 8];
+  capacidade := deque.Capacity();
+  tamanho := deque.Size();
+  cheio := deque.IsFull();
+  assert capacidade == 6 && tamanho == 3;
+  assert !cheio;
+  print "Nova capacidade: ", capacidade, "\n";
+
+  // 8. Inserções depois de crescer (PushFront volta para a última posição do array novo)
+  deque.PushFront(0);                    // [0, 7, 2, 8]
+  deque.PushBack(9);                     // [0, 7, 2, 8, 9]
+  assert deque.elementos == [0, 7, 2, 8, 9];
+  tem := deque.Contains(9);
+  assert tem;
+
+  // 9. Esvaziar o deque alternando as pontas
+  var r1 := deque.PopFront();
+  var r2 := deque.PopBack();
+  var r3 := deque.PopFront();
+  var r4 := deque.PopBack();
+  var r5 := deque.PopFront();
+  assert r1 == 0 && r2 == 9 && r3 == 7 && r4 == 8 && r5 == 2;
+  vazio := deque.IsEmpty();
+  assert vazio;
+  tem := deque.Contains(2);
+  assert !tem;
+  print "Deque vazio no final: ", vazio, "\n";
 }
