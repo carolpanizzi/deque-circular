@@ -70,14 +70,11 @@ class DequeCircular {
     cheio := quantidade == a.Length;
   }
 
-  // ===================== Pessoa 2 - Inserções =====================
-
-  // Adiciona um novo elemento ao final do deque.
-  // A posição física livre logo após o último elemento é
-  // (inicio + quantidade) % a.Length; se passar do fim do array, volta ao índice 0.
+  // posicao fisica livre depois do ultimo elemento = (inicio + quantidade) % a.length
+  // se passar do fim do array, volta ao indice 0
   method PushBack(x: int)
     requires Valid()
-    requires quantidade < a.Length          // o deque não pode estar cheio
+    requires quantidade < a.Length          // o deque nao pode estar cheio
     modifies this, a
     ensures Valid()
     ensures a == old(a)                     // o array continua o mesmo (mesma capacidade)
@@ -91,8 +88,7 @@ class DequeCircular {
     elementos := elementos + [x];
     quantidade := quantidade + 1;
 
-    // Prova de que Valid() continua valendo:
-    // os elementos antigos não foram sobrescritos e o novo está na última posição lógica.
+    // valid() continua valendo: os elem. antigos nao foram sobrescritos e o novo esta na ultima posicao logica
     forall i | 0 <= i < quantidade
       ensures a[(inicio + i) % a.Length] == elementos[i]
     {
@@ -103,12 +99,11 @@ class DequeCircular {
     }
   }
 
-  // Adiciona um novo elemento ao início do deque.
-  // O início anda uma posição para trás; se estava em 0, volta para a última
-  // posição do array (a.Length - 1), caracterizando a volta circular.
+  // adiciona um novo elemento ao inicio do deque
+  // o inicio anda uma posicao para tras; se estava em 0, volta para a ultima posicao
   method PushFront(x: int)
     requires Valid()
-    requires quantidade < a.Length          // o deque não pode estar cheio
+    requires quantidade < a.Length          // o deque nao pode estar cheio
     modifies this, a
     ensures Valid()
     ensures a == old(a)
@@ -123,8 +118,8 @@ class DequeCircular {
     elementos := [x] + elementos;
     quantidade := quantidade + 1;
 
-    // Prova de que Valid() continua valendo:
-    // a posição lógica i (i >= 1) no novo deque corresponde à posição i-1 no antigo.
+    // prova de que valid() continua valendo
+    // a posicao logica i (i >= 1) no novo deque corresponde a posicao i-1 no antigo
     forall i | 0 <= i < quantidade
       ensures a[(inicio + i) % a.Length] == elementos[i]
     {
@@ -140,9 +135,7 @@ class DequeCircular {
     }
   }
 
-  // ===================== Pessoa 3 - Remoções =====================
-
-  // Remove e retorna o primeiro elemento do deque.
+  // remove e retorna o primeiro elemento do deque
   method PopFront() returns (valor: int)
     requires Valid()
     requires quantidade > 0
@@ -160,19 +153,19 @@ class DequeCircular {
     quantidade := quantidade - 1;
     elementos := elementos[1..];
 
-    // Cada elemento restante passa a ocupar a posição lógica anterior.
+    // cada elemento restante passa a ocupar a posicao logica anterior
     forall i | 0 <= i < quantidade
       ensures a[(inicio + i) % a.Length] == elementos[i]
     {
       assert 0 <= i + 1 < old(quantidade);
       assert elementos[i] == old(elementos)[i + 1];
-      // inicio == old(inicio) + 1, ou 0 se old(inicio) era a última posição (volta circular).
+      // inicio == old(inicio) + 1, ou 0 se old(inicio) era a ultima posicao (volta circular)
       ModIntervalo(old(inicio) + 1, a.Length);
       ModIntervalo(inicio + i, a.Length);
       ModIntervalo(old(inicio) + i + 1, a.Length);
       assert (inicio + i) % a.Length ==
              (old(inicio) + i + 1) % a.Length;
-      // Dentro de old(...), "inicio" já se refere ao valor antigo.
+      // dentro de old(...), "inicio" ja se refere ao valor antigo
       assert a[(old(inicio) + i + 1) % a.Length] ==
              old(a[(inicio + i + 1) % a.Length]);
       assert old(a[(inicio + i + 1) % a.Length]) ==
@@ -180,7 +173,7 @@ class DequeCircular {
     }
   }
 
-  // Remove e retorna o último elemento do deque.
+  // remove e retorna o ultimo elemento do deque
   method PopBack() returns (valor: int)
     requires Valid()
     requires quantidade > 0
@@ -197,13 +190,13 @@ class DequeCircular {
     quantidade := quantidade - 1;
     elementos := elementos[..|elementos| - 1];
 
-    // Os elementos restantes mantêm suas posições físicas e sua ordem lógica.
+    // os elementos restantes mantem suas posicoes fisicas e sua ordem logica
     forall i | 0 <= i < quantidade
       ensures a[(inicio + i) % a.Length] == elementos[i]
     {
       assert 0 <= i < old(quantidade);
       assert elementos[i] == old(elementos)[i];
-      // Dentro de old(...), "inicio" já se refere ao valor antigo.
+      // dentro de old(...), "inicio" ja se refere ao valor antigo
       assert a[(inicio + i) % a.Length] ==
              old(a[(inicio + i) % a.Length]);
       assert old(a[(inicio + i) % a.Length]) ==
@@ -211,10 +204,8 @@ class DequeCircular {
     }
   }
 
-  // ============== Pessoa 4 - Busca e redimensionamento ==============
-
-  // Verifica se x pertence ao deque.
-  // Percorre as posições lógicas 0..quantidade-1 no array circular.
+  // verifica se x pertence ao deque
+  // percorre as posicoes logicas 0..quantidade-1 no array circular
   method Contains(x: int) returns (pertence: bool)
     requires Valid()
     ensures Valid()
@@ -223,7 +214,7 @@ class DequeCircular {
     var i := 0;
     while i < quantidade
       invariant 0 <= i <= quantidade
-      invariant forall k :: 0 <= k < i ==> elementos[k] != x   // nada encontrado até i
+      invariant forall k :: 0 <= k < i ==> elementos[k] != x   // nada encontrado ate i
       decreases quantidade - i
     {
       if a[(inicio + i) % a.Length] == x {
@@ -236,19 +227,19 @@ class DequeCircular {
     pertence := false;
   }
 
-  // Redimensiona o deque para uma capacidade maior.
-  // Como arrays têm tamanho fixo, aloca um array novo e copia os elementos
-  // na ordem lógica (desfazendo a volta circular): o primeiro vai para a posição 0.
+  // redimensiona o deque para uma capacidade maior
+  // como arrays tem tamanho fixo, aloca um array novo e copia os elementos
+  // na ordem logica (desfazendo a volta circular): o primeiro vai para a posicao 0
   method Resize(novaCapacidade: int)
     requires Valid()
-    requires novaCapacidade > a.Length      // só permite crescer
+    requires novaCapacidade > a.Length      // so permite crescer
     modifies this
     ensures Valid()
     ensures fresh(a)
     ensures a.Length == novaCapacidade
     ensures inicio == 0
     ensures quantidade == old(quantidade)
-    ensures elementos == old(elementos)     // o conteúdo e a ordem não mudam
+    ensures elementos == old(elementos)     // o conteudo e a ordem nao mudam
   {
     var novo := new int[novaCapacidade];
     var i := 0;
@@ -266,8 +257,8 @@ class DequeCircular {
     a := novo;
     inicio := 0;
 
-    // Prova de que Valid() vale no array novo: com inicio == 0 e
-    // k < quantidade < a.Length, a posição física (0 + k) % a.Length é o próprio k.
+    // prova de que valid() vale no array novo: com inicio == 0 e
+    // k < quantidade < a.length, a posicao fisica (0 + k) % a.length e o proprio k
     forall k | 0 <= k < quantidade
       ensures a[(inicio + k) % a.Length] == elementos[k]
     {
@@ -276,9 +267,7 @@ class DequeCircular {
   }
 }
 
-// ===================== Lemas auxiliares de aritmética modular =====================
-
-// Para 0 <= x < 2n, o resto da divisão por n é x (se x < n) ou x - n (caso contrário).
+// para 0 <= x < 2n, o resto da divisao por n e x (se x < n) ou x - n (caso contrario)
 lemma ModIntervalo(x: int, n: int)
   requires n > 0
   requires 0 <= x < 2 * n
@@ -287,8 +276,8 @@ lemma ModIntervalo(x: int, n: int)
 {
 }
 
-// Posições lógicas diferentes (menores que a capacidade) ocupam posições físicas
-// diferentes no array circular. Garante que inserir não sobrescreve elementos.
+// posicoes logicas diferentes (menores que a capacidade) ocupam posicoes fisicas
+// diferentes no array circular. garante que inserir nao sobrescreve elementos
 lemma ModDistinto(inicio: int, i: int, j: int, n: int)
   requires n > 0
   requires 0 <= inicio < n
@@ -324,13 +313,13 @@ method ExemplosPessoa1()
 
 method ExemplosPessoa2()
 {
-  // Inserções simples no fim e no início, com volta circular do início (0 -> 2)
+  // insercoes simples no fim e no inicio, com volta circular do inicio (0 -> 2)
   var deque := new DequeCircular(3);
   deque.PushBack(10);
   assert deque.elementos == [10];
   deque.PushBack(20);
   assert deque.elementos == [10, 20];
-  deque.PushFront(5);                    // inicio estava em 0: volta para a última posição
+  deque.PushFront(5);                    // inicio estava em 0: volta para a ultima posicao
   assert deque.inicio == 2;
   assert deque.elementos == [5, 10, 20];
   var tamanho := deque.Size();
@@ -339,8 +328,8 @@ method ExemplosPessoa2()
   assert tamanho == 3;
   assert cheio && !vazio;
 
-  // Volta circular do fim: após PushFront o início fica em 2,
-  // então os PushBack seguintes escrevem nas posições 0 e 1 do array
+  // volta circular do fim: apos pushfront o inicio fica em 2,
+  // entao os pushback seguintes escrevem nas posicoes 0 e 1 do array
   var circular := new DequeCircular(3);
   circular.PushFront(1);
   assert circular.inicio == 2;
@@ -352,7 +341,7 @@ method ExemplosPessoa2()
   var capacidade := circular.Capacity();
   assert capacidade == 3;
 
-  // Somente PushFront: a ordem lógica fica invertida em relação à de inserção
+  // somente pushfront: a ordem logica fica invertida em relacao a de insercao
   var frente := new DequeCircular(4);
   frente.PushFront(1);
   frente.PushFront(2);
@@ -362,22 +351,20 @@ method ExemplosPessoa2()
   var frenteCheia := frente.IsFull();
   assert tamanhoFrente == 3 && !frenteCheia;
 
-  // Capacidade mínima: uma inserção já enche o deque
+  // capacidade minima: uma insercao ja enche o deque
   var minimo := new DequeCircular(1);
   minimo.PushFront(7);
   assert minimo.elementos == [7];
   var minimoCheio := minimo.IsFull();
   assert minimoCheio;
 
-  // Os deques são independentes entre si
+  // os deques sao independentes entre si
   assert deque.elementos == [5, 10, 20];
 }
 
-// ===================== Main: demonstração com asserções =====================
-
 method Main()
 {
-  // 1. Criação: deque vazio com capacidade 3
+  // criacao do deque
   var deque := new DequeCircular(3);
   var tamanho := deque.Size();
   var capacidade := deque.Capacity();
@@ -386,11 +373,9 @@ method Main()
   assert tamanho == 0 && capacidade == 3;
   assert vazio && !cheio;
 
-  // 2. Busca em deque vazio
   var tem := deque.Contains(1);
   assert !tem;
 
-  // 3. Inserções nas duas pontas, com volta circular do início (0 -> 2)
   deque.PushBack(2);                     // [2]
   deque.PushFront(1);                    // [1, 2]
   deque.PushBack(3);                     // [1, 2, 3]
@@ -398,13 +383,13 @@ method Main()
   cheio := deque.IsFull();
   assert cheio;
 
-  // 4. Busca de elemento presente e ausente
+  // busca de elemento presente e ausente
   tem := deque.Contains(2);
   assert tem;
   tem := deque.Contains(9);
   assert !tem;
 
-  // 5. Remoções nas duas pontas: valores retornados e ordem restante
+  // remocoes nas duas pontas: valores retornados e ordem restante
   var primeiro := deque.PopFront();
   assert primeiro == 1;
   assert deque.elementos == [2, 3];
@@ -413,7 +398,7 @@ method Main()
   assert deque.elementos == [2];
   print "Removidos: ", primeiro, " e ", ultimo, "\n";
 
-  // 6. Nova volta circular depois das remoções; deque cheio de novo
+  // nova volta circular depois das remocoes; deque cheio de novo
   deque.PushFront(7);                    // [7, 2]
   deque.PushBack(8);                     // [7, 2, 8]
   assert deque.elementos == [7, 2, 8];
@@ -422,7 +407,7 @@ method Main()
   tem := deque.Contains(3);              // o 3 foi removido antes
   assert !tem;
 
-  // 7. Redimensionamento com o deque cheio: dados e ordem preservados
+  // redimensionamento com o deque cheio: dados e ordem preservados
   deque.Resize(6);
   assert deque.elementos == [7, 2, 8];
   capacidade := deque.Capacity();
@@ -432,14 +417,14 @@ method Main()
   assert !cheio;
   print "Nova capacidade: ", capacidade, "\n";
 
-  // 8. Inserções depois de crescer (PushFront volta para a última posição do array novo)
+  // insercoes depois de crescer (pushfront volta para a ultima posicao do array novo)
   deque.PushFront(0);                    // [0, 7, 2, 8]
   deque.PushBack(9);                     // [0, 7, 2, 8, 9]
   assert deque.elementos == [0, 7, 2, 8, 9];
   tem := deque.Contains(9);
   assert tem;
 
-  // 9. Esvaziar o deque alternando as pontas
+  // esvaziar o deque alternando as pontas
   var r1 := deque.PopFront();
   var r2 := deque.PopBack();
   var r3 := deque.PopFront();
